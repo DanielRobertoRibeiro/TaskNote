@@ -15,3 +15,7 @@ htmlcov/
 dist/
 build/
 test.db
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+.pnpm-store/

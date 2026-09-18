@@ -5,8 +5,8 @@ Este levantamento registra o que foi usado e produzido no MVP para apoiar manute
 ## 1. Fonte e escopo
 
 - Documento-base: `SDD_TaskNote_Gerenciador_de_Tarefas_e_Anotacoes.md`, versão 1.0.
-- Entrega: API REST backend conforme o MVP do SDD.
-- Fora desta entrega: frontend, colaboração, notificações, anexos, aplicação móvel, calendário externo e IA.
+- Entrega: aplicação full-stack com API REST e frontend React, expandindo o MVP do SDD.
+- Fora desta entrega: colaboração, notificações, anexos, aplicação móvel, calendário externo e IA.
 - Repositório-alvo: `DanielRobertoRibeiro/TaskNote`.
 
 ## 2. Dependências diretas
@@ -35,15 +35,31 @@ Este levantamento registra o que foi usado e produzido no MVP para apoiar manute
 | Ruff | `>=0.11,<1.0` | `0.16.8` | Lint e formatação |
 | coverage.py | transitiva | `7.16.1` | Medição de cobertura |
 
+### Frontend
+
+| Pacote | Versão validada | Finalidade |
+| --- | --- | --- |
+| Node.js | `24.19.0` | Runtime de build |
+| pnpm | `11.19.0` | Instalação reprodutível |
+| React | `19.3.0` | Camada de interface |
+| React DOM | `19.3.0` | Renderização no navegador |
+| Lucide React | `1.46.0` | Iconografia |
+| TypeScript | `7.0.2` | Tipagem estática |
+| Vite | `8.3.0` | Servidor de desenvolvimento e build |
+| plugin React para Vite | `6.1.1` | Transformação React |
+| Vitest | `5.0.1` | Testes unitários do frontend |
+
 ## 4. Infraestrutura e ferramentas
 
 | Item | Escolha | Observação |
 | --- | --- | --- |
 | Banco de produção | PostgreSQL 17 Alpine | Imagem `postgres:17-alpine` |
 | Banco de testes | SQLite em memória | Isolado, descartável e com chaves estrangeiras ativas |
-| Containers | Dockerfile + Compose | API aguarda health check do banco |
+| Containers | Dockerfiles + Compose | React/Nginx, API e banco com health checks |
 | Migração na inicialização | Alembic | Executada pelo entrypoint |
-| CI | GitHub Actions | Python 3.12, cache pip, Ruff, pytest e SQL offline |
+| CI | GitHub Actions | Backend e frontend validados separadamente |
+| CD | GitHub Pages Actions | Build Vite e publicação do artefato estático |
+| Frontend estático | GitHub Pages | Demonstração pública sem backend obrigatório |
 | Documentação interativa | Swagger UI e ReDoc | Geradas pelo OpenAPI |
 | Exemplos manuais | Postman Collection v2.1 | Variáveis e scripts de captura de IDs |
 | Controle de versão | Git | Branch principal `main` |
@@ -66,6 +82,11 @@ Docker não estava instalado na máquina de validação. Por isso, o Compose e o
 - `ON DELETE CASCADE` para dados do usuário e tabelas associativas.
 - Paginação por `offset/limit`, adequada ao volume esperado do MVP.
 - Busca com `ILIKE`; busca textual nativa do PostgreSQL fica como evolução.
+- React organizado em componentes, views, utilitários e adaptadores de dados.
+- Um único contrato `TaskNoteService` atende à API real e ao modo demonstração.
+- O modo demonstração usa `localStorage`, IDs UUID e dados relativos à data atual.
+- O build do Pages usa base `/TaskNote/`; o build Nginx usa base `/`.
+- Layout responsivo com navegação lateral no desktop e inferior em telas menores.
 
 ## 6. Controles de segurança
 
@@ -83,6 +104,9 @@ Docker não estava instalado na máquina de validação. Por isso, o Compose e o
 - Detalhes de validação omitem o valor recebido, evitando refletir senhas.
 - Logs registram IDs de requisição, não corpos, senhas ou tokens.
 - Container executa com usuário sem privilégios.
+- O frontend não contém segredos; `VITE_API_URL` é configuração pública de build.
+- O modo API valida erros do backend e não renderiza HTML recebido.
+- Formulários usam limites equivalentes aos contratos da API.
 
 Controles recomendados antes de internet pública: TLS no proxy, rate limiting, política de rotação, refresh/revogação de tokens, monitoramento, backups testados, secret manager, SAST e atualização automatizada de dependências.
 
@@ -121,11 +145,13 @@ Total documentado no OpenAPI: 17 operações de domínio/saúde.
 
 | Grupo | Conteúdo |
 | --- | --- |
-| Configuração | `.env.example`, `pyproject.toml`, requirements e ignores |
-| Aplicação | módulos de API, core, banco, repositórios, schemas e serviços |
+| Configuração | `.env.example`, `pyproject.toml`, requirements, package/lockfile e ignores |
+| Backend | módulos de API, core, banco, repositórios, schemas e serviços |
+| Frontend | React, TypeScript, CSS responsivo, adaptadores API/demo e testes |
 | Banco | `alembic.ini`, ambiente Alembic e migração inicial |
-| Containers | `Dockerfile`, `docker-entrypoint.sh`, `docker-compose.yml` |
-| Qualidade | testes, configuração de cobertura/Ruff e workflow de CI |
+| Containers | Dockerfiles, Nginx, entrypoint e `docker-compose.yml` |
+| Qualidade | testes, cobertura/Ruff, TypeScript/Vite e workflow de CI |
+| Publicação | workflow dedicado do GitHub Pages |
 | Consumo | coleção Postman |
 | Documentação | README, inventário técnico e licença |
 
@@ -139,6 +165,10 @@ Total documentado no OpenAPI: 17 operações de domínio/saúde.
 | `alembic upgrade head --sql` | SQL PostgreSQL gerado sem erro |
 | `git diff --check` | sem whitespace inválido |
 | OpenAPI | título, rotas e schema exercitados por teste |
+| `pnpm test` | 2 testes unitários aprovados |
+| `pnpm build` | TypeScript e bundle Vite aprovados |
+| build com `VITE_BASE_PATH=/TaskNote/` | assets gerados com caminho correto |
+| inspeção visual no navegador | acesso, dashboard, modal, tarefas, notas e tags aprovados |
 
 Coberturas funcionais exercitadas: cadastro, login, hash, erro uniforme, token ausente/inválido, isolamento entre usuários, CRUD de tarefa, status, reabertura, filtros combinados, busca, paginação, prazo com timezone, tag estrangeira, vínculo/desvínculo de nota, preservação após exclusão da tarefa, unicidade de tag, exclusão de associação, tarefa estrangeira e health check.
 
@@ -150,8 +180,26 @@ Coberturas funcionais exercitadas: cadastro, login, hash, erro uniforme, token a
 - A busca usa correspondência parcial, sem ranking linguístico.
 - O health check não mede serviços externos além do banco.
 - PostgreSQL em container não foi iniciado no host de validação por ausência local do Docker.
-- O frontend permanece fora do escopo definido pelo SDD.
+- O GitHub Pages hospeda somente o frontend; a API e o PostgreSQL ainda precisam de um provedor próprio para operação real pública.
+- Sem `VITE_API_URL`, a publicação pública funciona em modo demonstração com dados locais.
+- No modo API, o JWT é mantido no armazenamento do navegador; uma implantação de maior risco deve avaliar cookies `HttpOnly`, CSP e mitigação reforçada de XSS.
+- A inspeção visual foi feita nos breakpoints disponíveis do navegador automatizado; o CSS contempla desktop, tablet e celular.
 
 ## 12. Rastreabilidade com o SDD
 
-Todos os requisitos funcionais RF-01 a RF-12 e os não funcionais RNF-01 a RNF-07 foram contemplados. As funcionalidades declaradas fora de escopo permaneceram fora do MVP. A coleção Postman e a CI foram adicionadas como itens de qualidade da Fase 4.
+Todos os requisitos funcionais RF-01 a RF-12 e os não funcionais RNF-01 a RNF-07 foram contemplados. O frontend, previsto como evolução futura no SDD, também foi implementado. Colaboração, notificações, anexos, mobile, calendário e IA permanecem fora do MVP. A coleção Postman, a CI e o deploy no GitHub Pages completam a etapa de portfólio.
+
+## 13. Estado consolidado em 18/09/2026
+
+| Dimensão | Estado |
+| --- | --- |
+| Backend FastAPI | concluído e coberto por testes |
+| Banco e migrações | concluídos; PostgreSQL definido para produção |
+| Autenticação e autorização | concluídas |
+| Frontend React | concluído e integrado |
+| Modo demonstração | concluído e persistente no navegador |
+| Responsividade | validada e ajustada após inspeção visual |
+| Docker Compose | configurado para web, API e banco; não executado neste host |
+| CI | configurada para backend e frontend |
+| GitHub Pages | workflow de publicação configurado |
+| Backend público | não contratado/não implantado; fora do GitHub Pages |

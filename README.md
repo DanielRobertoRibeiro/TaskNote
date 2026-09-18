@@ -1,14 +1,17 @@
 # TaskNote — Gerenciador de Tarefas e Anotações
 
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=0f172a)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![CI](https://github.com/DanielRobertoRibeiro/TaskNote/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielRobertoRibeiro/TaskNote/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-API REST para organizar tarefas e anotações em um único lugar. O projeto reúne autenticação JWT, autorização por proprietário, tags, filtros, busca textual, paginação, regras de prazo e documentação OpenAPI em uma base pronta para portfólio e evolução.
+**[Abrir a demonstração no GitHub Pages](https://danielrobertoribeiro.github.io/TaskNote/)**
 
-> Estado do MVP: concluído. A suíte possui 17 testes automatizados, todos aprovados, com 93,70% de cobertura na validação local de 18/09/2026.
+Aplicação full-stack para organizar tarefas e anotações em um único lugar. O projeto reúne uma interface React responsiva, API FastAPI, autenticação JWT, autorização por proprietário, tags, filtros, busca textual, paginação e documentação OpenAPI em uma base pronta para portfólio e evolução.
+
+> Estado do projeto: MVP full-stack concluído. São 17 testes de backend com 93,70% de cobertura e 2 testes unitários do frontend, todos aprovados na validação local de 18/09/2026.
 
 ## O que foi entregue
 
@@ -26,12 +29,19 @@ API REST para organizar tarefas e anotações em um único lugar. O projeto reú
 - Erros em formato uniforme e rastreáveis por `X-Request-ID`.
 - Health check da aplicação e da conexão com o banco.
 - Migrações Alembic, Docker Compose, CI e coleção Postman.
+- Dashboard React/TypeScript com telas de acesso, visão geral, tarefas, anotações e tags.
+- Interface adaptada para desktop, tablet e celular, com validação visual em navegador.
+- Modo demonstração persistido no navegador e integração real configurável com a API.
+- Publicação automática no GitHub Pages por GitHub Actions.
 
 ## Arquitetura
 
 ```mermaid
 flowchart LR
-    C[Cliente HTTP] --> API[FastAPI / OpenAPI]
+    U[Usuário] --> WEB[React + TypeScript]
+    WEB -->|Modo API| API[FastAPI / OpenAPI]
+    WEB -->|Modo demo| LS[(LocalStorage)]
+    GH[GitHub Pages] --> WEB
     API --> AUTH[Dependência JWT]
     API --> R[Rotas]
     R --> S[Serviços e regras de negócio]
@@ -67,6 +77,9 @@ erDiagram
 
 | Área | Escolha | Uso |
 | --- | --- | --- |
+| Frontend | React 19 + TypeScript 7 | Interface e contratos tipados |
+| Build web | Vite 8 | Desenvolvimento e bundle otimizado |
+| Ícones | Lucide React | Iconografia acessível e consistente |
 | Linguagem | Python 3.12+ | Tipagem moderna e regras da aplicação |
 | API | FastAPI + Uvicorn | Rotas, validação e OpenAPI |
 | Dados | PostgreSQL 17 | Banco relacional de produção |
@@ -76,8 +89,9 @@ erDiagram
 | Configuração | pydantic-settings | Variáveis de ambiente |
 | Testes | pytest + HTTPX + SQLite | Testes rápidos de integração |
 | Qualidade | Ruff + coverage.py | Lint, formatação e cobertura |
-| Operação | Docker Compose | API e banco reproduzíveis |
-| CI | GitHub Actions | Lint, testes e migração a cada alteração |
+| Operação | Docker Compose + Nginx | Web, API e banco reproduzíveis |
+| Deploy web | GitHub Pages | Hospedagem estática do React |
+| CI/CD | GitHub Actions | Qualidade, build e publicação automática |
 
 O inventário com versões validadas, arquivos, decisões, controles e limitações está em [docs/INVENTARIO_TECNICO.md](docs/INVENTARIO_TECNICO.md).
 
@@ -101,6 +115,7 @@ docker compose up --build
 
 O entrypoint aplica `alembic upgrade head` antes de iniciar a API. Depois, acesse:
 
+- Aplicação React: `http://localhost:3000`
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 - OpenAPI JSON: `http://localhost:8000/openapi.json`
@@ -115,6 +130,8 @@ docker compose down
 Para também apagar o volume local do PostgreSQL, use `docker compose down -v`. Esse segundo comando remove os dados persistidos.
 
 ## Execução local
+
+### Backend
 
 Pré-requisitos: Python 3.12+, PostgreSQL e uma base criada.
 
@@ -151,6 +168,18 @@ Uma chave pode ser gerada sem serviço externo:
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
+### Frontend
+
+Pré-requisitos: Node.js 24+ e pnpm 11+.
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+A interface estará em `http://localhost:5173`. Ela pode usar os dados demonstrativos locais ou conectar-se à FastAPI em `http://localhost:8000`. O endereço também pode ser alterado na própria tela de acesso.
+
 ## Configuração
 
 | Variável | Padrão de desenvolvimento | Descrição |
@@ -166,9 +195,16 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Duração do acesso |
 | `PAGINATION_DEFAULT_SIZE` | `20` | Tamanho padrão da página |
 | `PAGINATION_MAX_SIZE` | `100` | Limite aceito por requisição |
-| `CORS_ORIGINS` | `[]` | Lista JSON de origens permitidas |
+| `CORS_ORIGINS` | origens locais | Lista JSON de origens permitidas |
 
 A aplicação recusa o segredo padrão se `ENVIRONMENT` não for `development` ou `test`.
+
+O build do frontend aceita:
+
+| Variável | Padrão | Descrição |
+| --- | --- | --- |
+| `VITE_API_URL` | `http://localhost:8000` | Endereço público da FastAPI |
+| `VITE_BASE_PATH` | `/` | Caminho base; no Pages é `/TaskNote/` |
 
 ## Contrato da API
 
@@ -283,15 +319,20 @@ pytest --cov=app --cov-report=term-missing
 ruff check .
 ruff format --check .
 alembic upgrade head --sql
+
+cd frontend
+pnpm test
+pnpm build
 ```
 
 Validação local registrada:
 
 ```text
-17 passed
-Cobertura total: 93,70%
-Ruff: aprovado
-Migração SQL offline: aprovada
+Backend: 17 testes aprovados · cobertura 93,70%
+Frontend: 2 testes aprovados
+TypeScript + Vite: build de produção aprovado
+Ruff e migração SQL offline: aprovados
+Inspeção visual: acesso, dashboard, tarefas, notas, tags e modal aprovados
 ```
 
 Os testes usam SQLite em memória apenas como infraestrutura efêmera. A aplicação e as migrações de produção usam PostgreSQL.
@@ -315,7 +356,9 @@ Para um ambiente público, ainda são recomendados HTTPS no proxy, rotação de 
 
 ```text
 TaskNote/
-├── .github/workflows/ci.yml
+├── .github/workflows/
+│   ├── ci.yml
+│   └── pages.yml
 ├── alembic/
 │   └── versions/20260917_0001_initial_schema.py
 ├── app/
@@ -328,6 +371,15 @@ TaskNote/
 │   └── main.py
 ├── docs/
 │   └── INVENTARIO_TECNICO.md
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── lib/
+│   │   ├── views/
+│   │   └── App.tsx
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
 ├── postman/
 │   └── TaskNote.postman_collection.json
 ├── tests/
@@ -348,6 +400,8 @@ TaskNote/
 - Serviços concentram regras e repositórios concentram SQL, reduzindo lógica nas rotas.
 - Operações síncronas são adequadas ao escopo do MVP e mantêm o fluxo simples; uma migração assíncrona pode ser avaliada sob carga medida.
 - O contrato usa login JSON e segurança HTTP Bearer, tornando o consumo direto e a autorização pelo Swagger simples.
+- O frontend usa um contrato de serviço único com adaptadores para FastAPI e demonstração local.
+- O Pages publica apenas a interface estática; o modo demonstração garante uma experiência navegável sem expor credenciais ou exigir backend público.
 
 ## Critérios de aceite do SDD
 
@@ -361,16 +415,30 @@ TaskNote/
 - [x] OpenAPI em `/docs`.
 - [x] Testes automatizados dos fluxos críticos.
 - [x] Execução local e Docker Compose documentadas.
+- [x] Interface React responsiva integrada à API.
+- [x] Demonstração estática publicável no GitHub Pages.
 
 ## Próximas evoluções
 
-- Interface web responsiva e quadro Kanban.
+- Quadro Kanban com arrastar e soltar.
 - Refresh tokens e revogação de sessões.
 - Lembretes e notificações.
 - Compartilhamento controlado de listas.
 - Anexos, links e busca textual avançada do PostgreSQL.
 - Integração com calendário.
 - Métricas, tracing e dashboard operacional.
+
+## Deploy no GitHub Pages
+
+O workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) testa, compila e publica `frontend/dist` a cada alteração do frontend na branch `main`.
+
+- URL: `https://danielrobertoribeiro.github.io/TaskNote/`
+- Base do Vite: `/TaskNote/`
+- Node.js: 24
+- Gerenciador: pnpm 11 com lockfile congelado
+- Fonte do Pages: GitHub Actions, habilitada automaticamente pelo workflow
+
+Sem uma API pública configurada, use **Explorar demonstração**. Para conectar uma FastAPI hospedada, crie a variável de repositório `VITE_API_URL` com a URL HTTPS e inclua a origem `https://danielrobertoribeiro.github.io` em `CORS_ORIGINS` no backend.
 
 ## Coleção Postman
 

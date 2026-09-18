@@ -20,10 +20,24 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tasknote}:${POSTGRES_PASSWORD:-tasknote}@db:5432/${POSTGRES_DB:-tasknote}
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
     ports:
       - "8000:8000"
     depends_on:
       db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+        VITE_BASE_PATH: /
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
         condition: service_healthy
     restart: unless-stopped
 
