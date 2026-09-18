@@ -1,0 +1,202 @@
+{
+  "info": {
+    "_postman_id": "7dd94d3c-d0f7-4a17-bfc4-21ac1bf0186f",
+    "name": "TaskNote API",
+    "description": "Fluxo principal da API TaskNote. Execute cadastro, login e depois os recursos na ordem sugerida.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "tagId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "noteId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Autenticação",
+      "item": [
+        {
+          "name": "Cadastrar usuário",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Daniel Ribeiro\",\n  \"email\": \"daniel@example.com\",\n  \"password\": \"senha-segura-123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.access_token) pm.collectionVariables.set('accessToken', body.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"daniel@example.com\",\n  \"password\": \"senha-segura-123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tags",
+      "item": [
+        {
+          "name": "Criar tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('tagId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Faculdade\"\n}" },
+            "url": "{{baseUrl}}/api/v1/tags"
+          }
+        },
+        {
+          "name": "Listar tags",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/tags" }
+        }
+      ]
+    },
+    {
+      "name": "Tarefas",
+      "item": [
+        {
+          "name": "Criar tarefa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('taskId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Preparar apresentação\",\n  \"description\": \"Revisar conteúdo e ensaiar.\",\n  \"priority\": \"alta\",\n  \"due_at\": \"2026-09-25T18:00:00Z\",\n  \"tag_ids\": [\"{{tagId}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/tasks"
+          }
+        },
+        {
+          "name": "Listar com filtros",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks?status=pendente&priority=alta&tag=faculdade&page=1&page_size=20"
+          }
+        },
+        {
+          "name": "Concluir tarefa",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"concluida\"\n}" },
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Anotações",
+      "item": [
+        {
+          "name": "Criar anotação vinculada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('noteId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Decisões\",\n  \"content\": \"Usar arquitetura em camadas.\",\n  \"task_id\": \"{{taskId}}\",\n  \"tag_ids\": [\"{{tagId}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/notes"
+          }
+        },
+        {
+          "name": "Buscar anotações",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/notes?q=arquitetura&tag=faculdade&page=1&page_size=20"
+          }
+        },
+        {
+          "name": "Desvincular anotação",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"task_id\": null\n}" },
+            "url": "{{baseUrl}}/api/v1/notes/{{noteId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Saúde",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health"
+          }
+        }
+      ]
+    }
+  ]
+}

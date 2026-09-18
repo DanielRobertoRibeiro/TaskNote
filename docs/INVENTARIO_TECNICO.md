@@ -1,0 +1,157 @@
+# Inventário técnico do TaskNote
+
+Este levantamento registra o que foi usado e produzido no MVP para apoiar manutenção, auditoria e decisões futuras. A validação foi executada em 18/09/2026, no Windows, com Python 3.12.14.
+
+## 1. Fonte e escopo
+
+- Documento-base: `SDD_TaskNote_Gerenciador_de_Tarefas_e_Anotacoes.md`, versão 1.0.
+- Entrega: API REST backend conforme o MVP do SDD.
+- Fora desta entrega: frontend, colaboração, notificações, anexos, aplicação móvel, calendário externo e IA.
+- Repositório-alvo: `DanielRobertoRibeiro/TaskNote`.
+
+## 2. Dependências diretas
+
+| Pacote | Faixa declarada | Versão validada | Finalidade |
+| --- | --- | --- | --- |
+| Python | `>=3.12` | `3.12.14` | Runtime |
+| FastAPI | `>=0.115,<1.0` | `0.141.1` | Framework HTTP/OpenAPI |
+| Uvicorn | `>=0.34,<1.0` | `0.53.0` | Servidor ASGI |
+| SQLAlchemy | `>=2.0,<3.0` | `2.0.54` | ORM e consultas |
+| Alembic | `>=1.15,<2.0` | `1.20.0` | Migrações |
+| psycopg | `>=3.2,<4.0` | `3.3.5` | Driver PostgreSQL |
+| pydantic-settings | `>=2.8,<3.0` | `2.15.0` | Configuração por ambiente |
+| PyJWT | `>=2.10,<3.0` | `2.14.0` | Emissão e validação JWT |
+| pwdlib | `>=0.2,<1.0` | `0.3.1` | API de hash de senha |
+| argon2-cffi | extra de `pwdlib` | `25.1.0` | Implementação Argon2 |
+| email-validator | `>=2.2,<3.0` | `2.3.0` | Validação de e-mail |
+
+## 3. Dependências de desenvolvimento
+
+| Pacote | Faixa declarada | Versão validada | Finalidade |
+| --- | --- | --- | --- |
+| pytest | `>=8.3,<10.0` | `9.1.1` | Execução dos testes |
+| pytest-cov | `>=6.0,<8.0` | `7.1.0` | Integração de cobertura |
+| HTTPX 2 | `>=2.0,<3.0` | `2.13.0` | Cliente usado pelo TestClient |
+| Ruff | `>=0.11,<1.0` | `0.16.8` | Lint e formatação |
+| coverage.py | transitiva | `7.16.1` | Medição de cobertura |
+
+## 4. Infraestrutura e ferramentas
+
+| Item | Escolha | Observação |
+| --- | --- | --- |
+| Banco de produção | PostgreSQL 17 Alpine | Imagem `postgres:17-alpine` |
+| Banco de testes | SQLite em memória | Isolado, descartável e com chaves estrangeiras ativas |
+| Containers | Dockerfile + Compose | API aguarda health check do banco |
+| Migração na inicialização | Alembic | Executada pelo entrypoint |
+| CI | GitHub Actions | Python 3.12, cache pip, Ruff, pytest e SQL offline |
+| Documentação interativa | Swagger UI e ReDoc | Geradas pelo OpenAPI |
+| Exemplos manuais | Postman Collection v2.1 | Variáveis e scripts de captura de IDs |
+| Controle de versão | Git | Branch principal `main` |
+| Licença | MIT | Uso, estudo e evolução permitidos |
+
+Docker não estava instalado na máquina de validação. Por isso, o Compose e o Dockerfile foram revisados estaticamente, enquanto a lógica foi executada pela suíte em SQLite e a migração foi validada em modo SQL offline para o dialeto PostgreSQL.
+
+## 5. Padrões e decisões
+
+- Arquitetura em camadas: rotas → serviços → repositórios → banco.
+- Injeção de dependência para sessão, configurações e usuário atual.
+- Modelos SQLAlchemy 2 com mapeamento tipado.
+- Schemas Pydantic distintos para criação, edição e resposta.
+- UUID para todas as entidades públicas.
+- UTC para conclusão e timestamps; prazo exige timezone.
+- Enumerações persistidas com valores do domínio em português.
+- Relações muitos-para-muitos para tags.
+- Nome normalizado NFKC + `casefold` para unicidade de tag.
+- `ON DELETE SET NULL` entre tarefas e anotações.
+- `ON DELETE CASCADE` para dados do usuário e tabelas associativas.
+- Paginação por `offset/limit`, adequada ao volume esperado do MVP.
+- Busca com `ILIKE`; busca textual nativa do PostgreSQL fica como evolução.
+
+## 6. Controles de segurança
+
+- Hash Argon2 recomendado pela biblioteca `pwdlib`.
+- JWT HS256 com `sub`, `iat`, `exp` e tipo do token.
+- Chave e credenciais exclusivamente via configuração externa.
+- Bloqueio do segredo padrão em ambientes não locais.
+- HTTP Bearer com `401` e `WWW-Authenticate` adequados.
+- Toda consulta de recurso inclui o proprietário autenticado.
+- Retorno `404` para evitar enumeração de IDs de terceiros.
+- Tags e tarefas de terceiros não podem ser vinculadas.
+- Entradas têm tipos, tamanhos e formatos validados.
+- SQL parametrizado pelo ORM.
+- Erros internos não devolvem stack trace nem detalhes do banco.
+- Detalhes de validação omitem o valor recebido, evitando refletir senhas.
+- Logs registram IDs de requisição, não corpos, senhas ou tokens.
+- Container executa com usuário sem privilégios.
+
+Controles recomendados antes de internet pública: TLS no proxy, rate limiting, política de rotação, refresh/revogação de tokens, monitoramento, backups testados, secret manager, SAST e atualização automatizada de dependências.
+
+## 7. Banco e índices
+
+Tabelas: `users`, `tasks`, `notes`, `tags`, `task_tags` e `note_tags`.
+
+Restrições principais:
+
+- e-mail único globalmente;
+- tag única por `(user_id, normalized_name)`;
+- chaves compostas nas tabelas associativas;
+- vínculo opcional de `notes.task_id`;
+- exclusões em cascata apenas onde o registro dependente não deve sobreviver.
+
+Índices principais:
+
+- proprietário de tarefas, notas e tags;
+- status, prioridade e prazo de tarefas;
+- índice composto `(user_id, status, due_at)`;
+- vínculo de nota por tarefa;
+- índice de unicidade fornecido pelas constraints de e-mail e tag.
+
+## 8. Superfície HTTP
+
+- 2 endpoints de autenticação.
+- 6 endpoints de tarefas.
+- 5 endpoints de anotações.
+- 3 endpoints de tags.
+- 1 endpoint de saúde.
+- 1 rota raiz informativa fora do schema.
+
+Total documentado no OpenAPI: 17 operações de domínio/saúde.
+
+## 9. Arquivos produzidos
+
+| Grupo | Conteúdo |
+| --- | --- |
+| Configuração | `.env.example`, `pyproject.toml`, requirements e ignores |
+| Aplicação | módulos de API, core, banco, repositórios, schemas e serviços |
+| Banco | `alembic.ini`, ambiente Alembic e migração inicial |
+| Containers | `Dockerfile`, `docker-entrypoint.sh`, `docker-compose.yml` |
+| Qualidade | testes, configuração de cobertura/Ruff e workflow de CI |
+| Consumo | coleção Postman |
+| Documentação | README, inventário técnico e licença |
+
+## 10. Evidências de validação
+
+| Verificação | Resultado |
+| --- | --- |
+| `pytest --cov=app --cov-report=term-missing` | 17 aprovados; 93,70% |
+| `ruff check .` | aprovado |
+| `ruff format --check .` | aprovado |
+| `alembic upgrade head --sql` | SQL PostgreSQL gerado sem erro |
+| `git diff --check` | sem whitespace inválido |
+| OpenAPI | título, rotas e schema exercitados por teste |
+
+Coberturas funcionais exercitadas: cadastro, login, hash, erro uniforme, token ausente/inválido, isolamento entre usuários, CRUD de tarefa, status, reabertura, filtros combinados, busca, paginação, prazo com timezone, tag estrangeira, vínculo/desvínculo de nota, preservação após exclusão da tarefa, unicidade de tag, exclusão de associação, tarefa estrangeira e health check.
+
+## 11. Limitações conhecidas e escolhas conscientes
+
+- Tokens de acesso não têm refresh ou lista de revogação no MVP.
+- Não há rate limiter embutido; normalmente pertence ao gateway/proxy.
+- Paginação por offset pode migrar para cursor em volumes muito altos.
+- A busca usa correspondência parcial, sem ranking linguístico.
+- O health check não mede serviços externos além do banco.
+- PostgreSQL em container não foi iniciado no host de validação por ausência local do Docker.
+- O frontend permanece fora do escopo definido pelo SDD.
+
+## 12. Rastreabilidade com o SDD
+
+Todos os requisitos funcionais RF-01 a RF-12 e os não funcionais RNF-01 a RNF-07 foram contemplados. As funcionalidades declaradas fora de escopo permaneceram fora do MVP. A coleção Postman e a CI foram adicionadas como itens de qualidade da Fase 4.

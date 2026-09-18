@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tasknote}
+      POSTGRES_USER: ${POSTGRES_USER:-tasknote}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tasknote}
+    volumes:
+      - tasknote_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tasknote}:${POSTGRES_PASSWORD:-tasknote}@db:5432/${POSTGRES_DB:-tasknote}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  tasknote_postgres_data:

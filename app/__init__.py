@@ -1,0 +1,1 @@
+"""TaskNote application package."""
