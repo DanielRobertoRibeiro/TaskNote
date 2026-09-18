@@ -436,7 +436,7 @@ O workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) testa, c
 - Base do Vite: `/TaskNote/`
 - Node.js: 24
 - Gerenciador: pnpm 11 com lockfile congelado
-- Fonte do Pages: GitHub Actions, habilitada automaticamente pelo workflow
+- Fonte do Pages: GitHub Actions, habilitada nas configurações do repositório
 
 Sem uma API pública configurada, use **Explorar demonstração**. Para conectar uma FastAPI hospedada, crie a variável de repositório `VITE_API_URL` com a URL HTTPS e inclua a origem `https://danielrobertoribeiro.github.io` em `CORS_ORIGINS` no backend.
 

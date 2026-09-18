@@ -169,6 +169,9 @@ Total documentado no OpenAPI: 17 operações de domínio/saúde.
 | `pnpm build` | TypeScript e bundle Vite aprovados |
 | build com `VITE_BASE_PATH=/TaskNote/` | assets gerados com caminho correto |
 | inspeção visual no navegador | acesso, dashboard, modal, tarefas, notas e tags aprovados |
+| GitHub Actions — CI | backend e frontend aprovados no commit `e69c2aa` |
+| GitHub Actions — Pages | build e deploy aprovados na tentativa 2 |
+| URL pública | HTTP 200 e modo demonstração exercitado no GitHub Pages |
 
 Coberturas funcionais exercitadas: cadastro, login, hash, erro uniforme, token ausente/inválido, isolamento entre usuários, CRUD de tarefa, status, reabertura, filtros combinados, busca, paginação, prazo com timezone, tag estrangeira, vínculo/desvínculo de nota, preservação após exclusão da tarefa, unicidade de tag, exclusão de associação, tarefa estrangeira e health check.
 
@@ -200,6 +203,6 @@ Todos os requisitos funcionais RF-01 a RF-12 e os não funcionais RNF-01 a RNF-0
 | Modo demonstração | concluído e persistente no navegador |
 | Responsividade | validada e ajustada após inspeção visual |
 | Docker Compose | configurado para web, API e banco; não executado neste host |
-| CI | configurada para backend e frontend |
-| GitHub Pages | workflow de publicação configurado |
+| CI | backend e frontend aprovados no GitHub Actions |
+| GitHub Pages | publicado e validado em `https://danielrobertoribeiro.github.io/TaskNote/` |
 | Backend público | não contratado/não implantado; fora do GitHub Pages |
